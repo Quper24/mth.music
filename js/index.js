@@ -1,90 +1,18 @@
-const dataMusic = [
-  {
-    id: '125345',
-    artist: 'The weeknd',
-    track: 'Save your tears',
-    poster: 'img/photo1.jpg',
-    mp3: 'audio/The Weeknd - Save Your Tears.mp3',
-  },
-  {
-    id: '22352345',
-    artist: 'Imagine Dragons',
-    track: 'Follow You',
-    poster: 'img/photo2.jpg',
-    mp3: 'audio/Imagine Dragons - Follow You.mp3',
-  },
-  {
-    id: '32345235',
-    artist: 'Tove Lo',
-    track: 'How Long',
-    poster: 'img/photo3.jpg',
-    mp3: 'audio/Tove Lo - How Long.mp3',
-  },
-  {
-    id: '423452345',
-    artist: 'Tom Odell',
-    track: 'Another Love',
-    poster: 'img/photo4.jpg',
-    mp3: 'audio/Tom Odell - Another Love.mp3',
-  },
-  {
-    id: '523452345',
-    artist: 'Lana Del Rey',
-    track: 'Born To Die',
-    poster: 'img/photo5.jpg',
-    mp3: 'audio/Lana Del Rey - Born To Die.mp3',
-  },
-  {
-    id: '6234523',
-    artist: 'Adele',
-    track: 'Hello',
-    poster: 'img/photo6.jpg',
-    mp3: 'audio/Adele - Hello.mp3',
-  },
-  {
-    id: '764436',
-    artist: 'Tom Odell',
-    track: "Can't Pretend",
-    poster: 'img/photo7.jpg',
-    mp3: "audio/Tom Odell - Can't Pretend.mp3",
-  },
-  {
-    id: '823424',
-    artist: 'Lana Del Rey',
-    track: 'Young And Beautiful',
-    poster: 'img/photo8.jpg',
-    mp3: 'audio/Lana Del Rey - Young And Beautiful.mp3',
-  },
-  {
-    id: '92345235',
-    artist: 'Adele',
-    track: 'Someone Like You',
-    poster: 'img/photo9.jpg',
-    mp3: 'audio/Adele - Someone Like You.mp3',
-  },
-  {
-    id: '102345235',
-    artist: 'Imagine Dragons',
-    track: 'Natural',
-    poster: 'img/photo10.jpg',
-    mp3: 'audio/Imagine Dragons - Natural.mp3',
-  },
-  {
-    id: '112435',
-    artist: 'Drake',
-    track: 'Laugh Now Cry Later',
-    poster: 'img/photo11.jpg',
-    mp3: 'audio/Drake - Laugh Now Cry Later.mp3',
-  },
-  {
-    id: '1253245',
-    artist: 'Madonna',
-    track: 'Frozen',
-    poster: 'img/photo12.jpg',
-    mp3: 'audio/Madonna - Frozen.mp3',
-  },
-];
+const API_URL = 'http://localhost:3024/';
 
+const throttle = (callee, timeout) => {
+  let timer = null
+  return function perform(...args) {
+    if (timer) return
+    timer = setTimeout(() => {
+      callee(...args)
+      clearTimeout(timer)
+      timer = null
+    }, timeout)
+  }
+};
+
+let dataMusic = [];
 let playlist = [];
 
 const favoriteList = localStorage.getItem('favorite')
@@ -109,6 +37,7 @@ const playerTimePassed = document.querySelector('.player__time-passed');
 const playerTimeTotal = document.querySelector('.player__time-total');
 const playerVolumeInput = document.querySelector('.player__volume-input');
 
+const search = document.querySelector('.search');
 
 const catalogAddBtn = document.createElement('button');
 catalogAddBtn.classList.add('catalog__btn-add')
@@ -161,12 +90,13 @@ const playMusic = (event) => {
     i = index;
     return id === item.id;
   });
-  audio.src = track.mp3;
+  audio.src = `${API_URL}${track.mp3}`;
 
   audio.play();
   
   pauseBtn.classList.remove('player__icon_play');
   player.classList.add('player_active');
+  player.dataset.idTrack = id;
 
   const prevTrack = i === 0 ? playlist.length - 1 : i - 1;
   const nextTrack = i + 1 === playlist.length ? 0 : i + 1;
@@ -203,11 +133,17 @@ const createCard = (data) => {
   const card = document.createElement('a');
   card.href = '#';
   card.classList.add('catalog__item', 'track');
+  if (player.dataset.idTrack === data.id) {
+    card.classList.add('track_active');
+    if (audio.paused) {
+      card.classList.add('track_pause');
+    }
+  }
   card.dataset.idTrack = data.id;
 
   card.innerHTML = `
     <div class="track__img-wrap">
-      <img class="track__poster" src="${data.poster}" alt="${data.artist} ${data.track}" width="180" height="180">
+      <img class="track__poster" src="${API_URL}${data.poster}" alt="${data.artist} ${data.track}" width="180" height="180">
     </div>
 
     <div class="track__info track-info">
@@ -255,10 +191,11 @@ const updateTime = () => {
 
 }
 
-const init = () => {
+const init = async () => {
   audio.volume = localStorage.getItem('volume') || 1;
   playerVolumeInput.value = audio.volume * 100;
 
+  dataMusic = await fetch(`${API_URL}api/music`).then((data) => data.json())
 
   renderCatalog(dataMusic);
   checkCount();
@@ -274,10 +211,12 @@ const init = () => {
   nextBtn.addEventListener('click', playMusic);
 
   audio.addEventListener('ended', () => {
-    nextBtn.dispatchEvent(new Event('click', {bubbles: true}));
+    nextBtn.click();
   })
+
+  const updateTimeThrottle = throttle(updateTime, 500)
   
-  audio.addEventListener('timeupdate', updateTime);
+  audio.addEventListener('timeupdate', updateTimeThrottle);
   
   playerProgressInput.addEventListener('change', () => {
     const progress = playerProgressInput.value;
@@ -324,6 +263,15 @@ const init = () => {
       muteBtn.classList.remove('player__icon_mute-off');
       playerVolumeInput.value = audio.volume * 100;
     }
+  });
+
+  search.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    playlist = await fetch(`${API_URL}api/music?search=${search.search.value}`).then((data) => data.json())
+
+    renderCatalog(playlist);
+    checkCount();
   })
 
 };
