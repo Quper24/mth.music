@@ -1,17 +1,5 @@
 const API_URL = 'http://localhost:3024/';
 
-const throttle = (callee, timeout) => {
-  let timer = null
-  return function perform(...args) {
-    if (timer) return
-    timer = setTimeout(() => {
-      callee(...args)
-      clearTimeout(timer)
-      timer = null
-    }, timeout)
-  }
-};
-
 let dataMusic = [];
 let playlist = [];
 
@@ -209,14 +197,8 @@ const init = async () => {
 
   prevBtn.addEventListener('click', playMusic);
   nextBtn.addEventListener('click', playMusic);
-
-  audio.addEventListener('ended', () => {
-    nextBtn.click();
-  })
-
-  const updateTimeThrottle = throttle(updateTime, 500)
   
-  audio.addEventListener('timeupdate', updateTimeThrottle);
+  audio.addEventListener('timeupdate', updateTime);
   
   playerProgressInput.addEventListener('change', () => {
     const progress = playerProgressInput.value;
