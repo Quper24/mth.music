@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3024/';
+const API_URL = 'https://east-nimble-snipe.glitch.me/';
 
 let dataMusic = [];
 let playlist = [];
